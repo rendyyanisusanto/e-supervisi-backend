@@ -1,0 +1,18 @@
+export const SUPERVISION_STATUS = {
+  TERJADWAL: 'TERJADWAL',
+  DRAFT: 'DRAFT',
+  SELESAI: 'SELESAI',
+  DIBATALKAN: 'DIBATALKAN',
+} as const;
+
+export const REFLECTION_STATUS = {
+  BELUM_DIISI: 'BELUM_DIISI',
+  SUDAH_DIISI: 'SUDAH_DIISI',
+  SUDAH_DIBACA: 'SUDAH_DIBACA',
+} as const;
+
+export const WA_STATUS = {
+  PENDING: 'PENDING',
+  SENT: 'SENT',
+  FAILED: 'FAILED',
+} as const;

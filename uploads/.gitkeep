@@ -1,0 +1,3 @@
+# Folder ini digunakan untuk menyimpan file yang diupload oleh pengguna.
+# Isi folder ini tidak di-commit ke repository (lihat .gitignore).
+# File .gitkeep ini memastikan struktur folder tetap ada saat clone.

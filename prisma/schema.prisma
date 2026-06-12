@@ -1,0 +1,547 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ===============================
+// ENUMS
+// ===============================
+
+enum Gender {
+  L
+  P
+}
+
+enum InstrumentType {
+  ADMINISTRASI
+  PERENCANAAN
+  PELAKSANAAN
+  ATP
+  ASESMEN
+  REFLEKSI
+  LAINNYA
+}
+
+enum SupervisionType {
+  LANGSUNG
+  TERJADWAL
+}
+
+enum SupervisionStatus {
+  TERJADWAL
+  DRAFT
+  SELESAI
+  DIBATALKAN
+}
+
+enum ReflectionStatus {
+  BELUM_DIISI
+  SUDAH_DIISI
+  SUDAH_DIBACA
+}
+
+enum WaStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum WaCategory {
+  SUPERVISI
+  HASIL
+  REFLEKSI
+  PENGINGAT
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+enum PaperSize {
+  A4
+  F4
+}
+
+enum PaperOrientation {
+  PORTRAIT
+  LANDSCAPE
+}
+
+enum ReportHeaderStyle {
+  SIMPLE
+  FORMAL
+  MODERN
+}
+
+// ===============================
+// MASTER PERIODE
+// ===============================
+
+model Period {
+  id         BigInt   @id @default(autoincrement())
+  name       String   @db.VarChar(150)
+  start_date DateTime @db.Date
+  end_date   DateTime @db.Date
+  is_active  Boolean  @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  supervisions Supervision[]
+
+  @@map("periods")
+}
+
+// ===============================
+// MASTER GURU & AKUN
+// ===============================
+
+model Teacher {
+  id              BigInt   @id @default(autoincrement())
+  photo           String?  @db.VarChar(255)
+  name            String   @db.VarChar(150)
+  nip             String?  @db.VarChar(50)
+  nuptk           String?  @db.VarChar(50)
+  nik             String?  @db.VarChar(50)
+  gender          Gender?
+  email           String?  @db.VarChar(100)
+  phone           String?  @db.VarChar(30)
+  main_subject_id BigInt?
+  position        String?  @db.VarChar(100)
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  mainSubject          Subject?             @relation(fields: [main_subject_id], references: [id], onDelete: SetNull)
+  user                 User?
+  homeroomClassrooms   Classroom[]          @relation("HomeroomTeacher")
+  supervisionsAsTeacher   Supervision[]     @relation("TeacherSupervision")
+  supervisionsAsSupervisor Supervision[]    @relation("SupervisorSupervision")
+  reflections          TeacherReflection[]
+  waLogs               WaLog[]
+
+  @@map("teachers")
+}
+
+model User {
+  id            BigInt    @id @default(autoincrement())
+  teacher_id    BigInt    @unique
+  username      String    @unique @db.VarChar(100)
+  password      String    @db.VarChar(255)
+  name          String    @db.VarChar(150)
+  email         String?   @db.VarChar(100)
+  is_active     Boolean   @default(true)
+  last_login_at DateTime?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+
+  teacher       Teacher        @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
+  userRoles     UserRole[]
+  refreshTokens RefreshToken[]
+  supervisionsCreated  Supervision[] @relation("SupervisionCreatedBy")
+  supervisionsSubmitted Supervision[] @relation("SupervisionSubmittedBy")
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Role {
+  id         BigInt   @id @default(autoincrement())
+  name       String   @unique @db.VarChar(50)
+  label      String   @db.VarChar(100)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  userRoles UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  id         BigInt   @id @default(autoincrement())
+  user_id    BigInt
+  role_id    BigInt
+  created_at DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [role_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, role_id])
+  @@map("user_roles")
+}
+
+model RefreshToken {
+  id         BigInt    @id @default(autoincrement())
+  user_id    BigInt
+  token      String    @db.Text
+  expires_at DateTime
+  revoked_at DateTime?
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+// ===============================
+// MASTER MAPEL & KELAS
+// ===============================
+
+model Subject {
+  id         BigInt   @id @default(autoincrement())
+  code       String   @unique @db.VarChar(50)
+  name       String   @db.VarChar(150)
+  group_name String?  @db.VarChar(100)
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  teachers     Teacher[]
+  supervisions Supervision[]
+
+  @@map("subjects")
+}
+
+model Classroom {
+  id                  BigInt   @id @default(autoincrement())
+  name                String   @db.VarChar(100)
+  grade               String?  @db.VarChar(20)
+  major               String?  @db.VarChar(100)
+  homeroom_teacher_id BigInt?
+  is_active           Boolean  @default(true)
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  homeroomTeacher Teacher?      @relation("HomeroomTeacher", fields: [homeroom_teacher_id], references: [id], onDelete: SetNull)
+  supervisions    Supervision[]
+
+  @@map("classrooms")
+}
+
+// ===============================
+// MASTER INSTRUMEN SUPERVISI
+// ===============================
+
+model Instrument {
+  id          BigInt         @id @default(autoincrement())
+  code        String         @unique @db.VarChar(50)
+  name        String         @db.VarChar(200)
+  type        InstrumentType
+  description String?        @db.Text
+  is_active   Boolean        @default(true)
+  created_at  DateTime       @default(now())
+  updated_at  DateTime       @updatedAt
+
+  items        InstrumentItem[]
+  supervisions Supervision[] @relation("SupervisionToInstrument")
+
+  @@map("instruments")
+}
+
+model InstrumentItem {
+  id            BigInt   @id @default(autoincrement())
+  instrument_id BigInt
+  category      String   @db.VarChar(150)
+  code          String   @db.VarChar(50)
+  description   String   @db.Text
+  max_score     Int      @default(4)
+  sort_order    Int      @default(0)
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  instrument       Instrument       @relation(fields: [instrument_id], references: [id], onDelete: Cascade)
+  supervisionItems SupervisionItem[]
+
+  @@unique([instrument_id, code])
+  @@map("instrument_items")
+}
+
+model ScoreRange {
+  id          BigInt   @id @default(autoincrement())
+  min_score   Decimal  @db.Decimal(5, 2)
+  max_score   Decimal  @db.Decimal(5, 2)
+  status      String   @db.VarChar(100)
+  color       String?  @db.VarChar(30)
+  description String?  @db.Text
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@map("score_ranges")
+}
+
+// ===============================
+// SUPERVISI
+// ===============================
+
+model Supervision {
+  id            BigInt            @id @default(autoincrement())
+  period_id     BigInt
+  teacher_id    BigInt
+  supervisor_id BigInt
+  subject_id    BigInt?
+  classroom_id  BigInt?
+
+  supervision_type SupervisionType   @default(LANGSUNG)
+  status           SupervisionStatus @default(DRAFT)
+
+  scheduled_date DateTime? @db.Date
+  scheduled_time DateTime? @db.Time
+  supervision_date DateTime? @db.Date
+  location       String?   @db.VarChar(150)
+
+  initial_note   String? @db.Text
+
+  total_score    Decimal @default(0) @db.Decimal(8, 2)
+  max_score      Decimal @default(0) @db.Decimal(8, 2)
+  final_score    Decimal @default(0) @db.Decimal(5, 2)
+  final_status   String? @db.VarChar(100)
+
+  strength_note      String? @db.Text
+  improvement_note   String? @db.Text
+  general_note       String? @db.Text
+  recommendation_note String? @db.Text
+  conclusion_note    String? @db.Text
+
+  submitted_at DateTime?
+  created_by   BigInt?
+  submitted_by BigInt?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+
+  period     Period      @relation(fields: [period_id], references: [id])
+  teacher    Teacher     @relation("TeacherSupervision", fields: [teacher_id], references: [id])
+  supervisor Teacher     @relation("SupervisorSupervision", fields: [supervisor_id], references: [id])
+  instruments Instrument[] @relation("SupervisionToInstrument")
+  subject    Subject?    @relation(fields: [subject_id], references: [id])
+  classroom  Classroom?  @relation(fields: [classroom_id], references: [id])
+  createdBy  User?       @relation("SupervisionCreatedBy", fields: [created_by], references: [id])
+  submittedBy User?      @relation("SupervisionSubmittedBy", fields: [submitted_by], references: [id])
+
+  items      SupervisionItem[]
+  reflection TeacherReflection?
+  waLogs     WaLog[]
+
+  @@index([period_id])
+  @@index([teacher_id])
+  @@index([supervisor_id])
+  @@index([status])
+  @@map("supervisions")
+}
+
+model SupervisionItem {
+  id                 BigInt   @id @default(autoincrement())
+  supervision_id     BigInt
+  instrument_item_id BigInt
+
+  item_category    String  @db.VarChar(150)
+  item_code        String  @db.VarChar(50)
+  item_description String  @db.Text
+
+  max_score   Int
+  score       Int?
+  item_status String? @db.VarChar(100)
+  note        String? @db.Text
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  supervision    Supervision    @relation(fields: [supervision_id], references: [id], onDelete: Cascade)
+  instrumentItem InstrumentItem @relation(fields: [instrument_item_id], references: [id])
+
+  @@unique([supervision_id, instrument_item_id])
+  @@index([supervision_id])
+  @@map("supervision_items")
+}
+
+// ===============================
+// REFLEKSI GURU
+// ===============================
+
+model TeacherReflection {
+  id            BigInt          @id @default(autoincrement())
+  supervision_id BigInt          @unique
+  teacher_id    BigInt
+
+  strength_reflection  String? @db.Text
+  obstacle_reflection  String? @db.Text
+  improvement_plan     String? @db.Text
+  support_needed       String? @db.Text
+  target_date          DateTime? @db.Date
+
+  status       ReflectionStatus @default(BELUM_DIISI)
+  submitted_at DateTime?
+  read_at      DateTime?
+  created_at   DateTime         @default(now())
+  updated_at   DateTime         @updatedAt
+
+  supervision Supervision @relation(fields: [supervision_id], references: [id], onDelete: Cascade)
+  teacher     Teacher     @relation(fields: [teacher_id], references: [id])
+
+  @@index([teacher_id])
+  @@map("teacher_reflections")
+}
+
+// ===============================
+// WA TEMPLATES & LOGS
+// ===============================
+
+model WaTemplate {
+  id          BigInt     @id @default(autoincrement())
+  code        String     @unique @db.VarChar(100)
+  name        String     @db.VarChar(150)
+  description String?    @db.Text
+  category    WaCategory @default(SUPERVISI)
+  content     String     @db.Text
+  is_active   Boolean    @default(true)
+  created_at  DateTime   @default(now())
+  updated_at  DateTime   @updatedAt
+
+  waLogs WaLog[]
+
+  @@map("wa_templates")
+}
+
+model WaLog {
+  id            BigInt    @id @default(autoincrement())
+  template_id   BigInt?
+  supervision_id BigInt?
+  teacher_id    BigInt?
+  phone         String    @db.VarChar(30)
+  recipient_name String?  @db.VarChar(150)
+  template_code  String?  @db.VarChar(100)
+  message       String    @db.Text
+  status        WaStatus  @default(PENDING)
+  response      String?   @db.Text
+  error_message  String?  @db.Text
+  sent_at       DateTime?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+
+  template   WaTemplate?  @relation(fields: [template_id], references: [id], onDelete: SetNull)
+  supervision Supervision? @relation(fields: [supervision_id], references: [id], onDelete: SetNull)
+  teacher    Teacher?     @relation(fields: [teacher_id], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([template_code])
+  @@index([teacher_id])
+  @@index([supervision_id])
+  @@index([created_at])
+  @@map("wa_logs")
+}
+
+// ===============================
+// PENGATURAN SISTEM
+// ===============================
+
+model SchoolProfile {
+  id               BigInt   @id @default(autoincrement())
+  name             String   @db.VarChar(200)
+  npsn             String?  @db.VarChar(50)
+  address          String?  @db.Text
+  city             String?  @db.VarChar(100)
+  province         String?  @db.VarChar(100)
+  phone            String?  @db.VarChar(30)
+  email            String?  @db.VarChar(100)
+  website          String?  @db.VarChar(150)
+  logo             String?  @db.VarChar(255)
+
+  principal_name   String?  @db.VarChar(150)
+  principal_nip    String?  @db.VarChar(50)
+  curriculum_name  String?  @db.VarChar(150)
+  curriculum_nip   String?  @db.VarChar(50)
+
+  report_footer    String?  @db.Text
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  @@map("school_profiles")
+}
+
+model ReportSetting {
+  id                      BigInt             @id @default(autoincrement())
+  letterhead_image        String?            @db.VarChar(255)
+  show_logo               Boolean            @default(true)
+  show_school_address     Boolean            @default(true)
+  show_principal_signature Boolean           @default(true)
+  show_supervisor_signature Boolean          @default(true)
+  show_curriculum_signature Boolean          @default(false)
+  use_qr_validation       Boolean            @default(false)
+  document_number_format  String?            @db.VarChar(150)
+  paper_size              PaperSize          @default(A4)
+  orientation             PaperOrientation   @default(PORTRAIT)
+  header_style            ReportHeaderStyle  @default(FORMAL)
+  watermark_text          String?            @db.VarChar(150)
+  footer_text             String?            @db.Text
+  created_at              DateTime           @default(now())
+  updated_at              DateTime           @updatedAt
+
+  @@map("report_settings")
+}
+
+model AppPreference {
+  id                          BigInt   @id @default(autoincrement())
+  auto_use_active_period      Boolean  @default(true)
+  auto_save_assessment        Boolean  @default(true)
+  require_note_for_low_score  Boolean  @default(true)
+  low_score_threshold         Int      @default(2)
+  default_score_max           Int      @default(4)
+  enable_wa_notification      Boolean  @default(true)
+  enable_reflection_reminder  Boolean  @default(true)
+  created_at                  DateTime @default(now())
+  updated_at                  DateTime @updatedAt
+
+  @@map("app_preferences")
+}
+
+// ===============================
+// NOTIFICATIONS
+// ===============================
+
+model Notification {
+  id         BigInt           @id @default(autoincrement())
+  user_id    BigInt?
+  title      String           @db.VarChar(200)
+  message    String           @db.Text
+  type       NotificationType @default(INFO)
+  is_read    Boolean          @default(false)
+  link       String?          @db.VarChar(255)
+  created_at DateTime         @default(now())
+  updated_at DateTime         @updatedAt
+
+  user User? @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@index([user_id, is_read])
+  @@map("notifications")
+}
+
+// ===============================
+// AUDIT LOG
+// ===============================
+
+model AuditLog {
+  id          BigInt   @id @default(autoincrement())
+  user_id     BigInt?
+  action      String   @db.VarChar(100)
+  module      String   @db.VarChar(100)
+  description String?  @db.Text
+  ip_address  String?  @db.VarChar(100)
+  user_agent  String?  @db.Text
+  created_at  DateTime @default(now())
+
+  @@index([user_id])
+  @@index([action])
+  @@index([module])
+  @@index([created_at])
+  @@map("audit_logs")
+}
