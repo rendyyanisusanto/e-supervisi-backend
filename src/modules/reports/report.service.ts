@@ -127,7 +127,7 @@ export const reportService = {
         else m.kurang++;
       } else if (s.status === 'TERJADWAL') {
         m.scheduled++;
-      } else if (s.status === 'DRAFT' || s.status === 'BELUM_TERLAKSANA') {
+      } else if (s.status === 'DRAFT') {
         m.draft++;
       }
     });
