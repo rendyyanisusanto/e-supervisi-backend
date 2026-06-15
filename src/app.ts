@@ -12,39 +12,37 @@ const app = express();
 // =============================
 // Security Middleware
 // =============================
-app.use(helmet());
-
-// Parse allowed origins from env (supports comma-separated list)
-const rawOrigins = env.FRONTEND_URL.split(',').map(o => o.trim()).filter(Boolean);
-const allowedOrigins = rawOrigins;
-
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (e.g. mobile apps, curl, Postman)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error(`CORS policy: origin ${origin} not allowed`));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStatus: 204,
+// Helmet: disable crossOriginResourcePolicy so that cross-origin
+// fetch/XHR requests from the frontend domain are not blocked.
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  crossOriginOpenerPolicy: false,
 }));
 
-// Explicitly handle OPTIONS preflight for all routes
-app.options('*', cors({
+// =============================
+// CORS
+// =============================
+// Parse allowed origins from env (supports comma-separated list)
+// e.g. FRONTEND_URL=https://e-supervisi.simsmk.sch.id,http://localhost:5173
+const allowedOrigins = env.FRONTEND_URL.split(',').map(o => o.trim()).filter(Boolean);
+
+const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
+    // Allow requests with no origin (curl, Postman, mobile apps)
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error(`CORS policy: origin ${origin} not allowed`));
+    // Return null (not an Error) so Express doesn't treat it as a 500
+    return callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   optionsSuccessStatus: 204,
-}));
+};
+
+// Handle OPTIONS preflight FIRST, before any other middleware
+app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
 
 // =============================
 // Request Parsing
@@ -74,3 +72,4 @@ app.use(notFoundMiddleware);
 app.use(errorMiddleware);
 
 export default app;
+
