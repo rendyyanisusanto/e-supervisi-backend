@@ -23,7 +23,7 @@ export const deleteOldFileIfExists = (filePath: string) => {
 };
 
 export const compressTeacherPhoto = async (file: Express.Multer.File, fileName: string): Promise<string> => {
-  const uploadDir = path.join(process.cwd(), 'uploads', 'teachers');
+  const uploadDir = path.join(process.cwd(), env.UPLOAD_DIR, 'teachers');
   if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
   }
@@ -38,8 +38,10 @@ export const compressTeacherPhoto = async (file: Express.Multer.File, fileName: 
   return `/uploads/teachers/${finalFileName}`;
 };
 
+import { env } from '../../config/env';
+
 export const compressSchoolLogo = async (file: Express.Multer.File, fileName: string): Promise<string> => {
-  const uploadDir = path.join(process.cwd(), 'uploads', 'school');
+  const uploadDir = path.join(process.cwd(), env.UPLOAD_DIR, 'school');
   if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
   }
