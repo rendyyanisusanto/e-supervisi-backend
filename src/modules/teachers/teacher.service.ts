@@ -253,7 +253,36 @@ export const teacherService = {
         },
       });
 
-      if (dto.username && !existing.user) {
+      if (existing.user) {
+        // Update existing user roles
+        if (dto.roles && dto.roles.length > 0) {
+          const roles = await tx.role.findMany({ where: { name: { in: dto.roles } } });
+          await tx.userRole.deleteMany({ where: { user_id: existing.user.id } });
+          await tx.userRole.createMany({
+            data: roles.map((r) => ({ user_id: existing.user!.id, role_id: r.id })),
+          });
+        }
+
+        // Update existing user credentials/info
+        const updateUserData: any = {};
+        if (dto.username && dto.username !== existing.user.username) {
+          const existUsername = await tx.user.findUnique({ where: { username: dto.username } });
+          if (existUsername) throw new HttpError('Username sudah digunakan', 409);
+          updateUserData.username = dto.username;
+        }
+        if (dto.password) {
+          updateUserData.password = await hashPassword(dto.password);
+        }
+        if (dto.name) updateUserData.name = dto.name;
+        if (dto.email !== undefined) updateUserData.email = dto.email;
+
+        if (Object.keys(updateUserData).length > 0) {
+          await tx.user.update({
+            where: { id: existing.user.id },
+            data: updateUserData
+          });
+        }
+      } else if (dto.username) {
         const existingUser = await tx.user.findUnique({ where: { username: dto.username } });
         if (existingUser) throw new HttpError('Username sudah digunakan', 409);
 
