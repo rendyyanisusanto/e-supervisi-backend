@@ -4,6 +4,20 @@ import { successResponse, paginatedResponse, asyncHandler } from '../../common/u
 import { MESSAGES } from '../../common/constants/messages';
 
 export const teacherController = {
+  getImportTemplate: asyncHandler(async (req: Request, res: Response) => {
+    const buffer = await teacherService.getImportTemplate();
+    res.setHeader('Content-Disposition', 'attachment; filename="Template_Import_Guru.xlsx"');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buffer);
+  }),
+  importExcel: asyncHandler(async (req: Request, res: Response) => {
+    if (!req.file) {
+      res.status(400).json({ success: false, message: 'File tidak ditemukan' });
+      return;
+    }
+    const result = await teacherService.importExcel(req.file.buffer);
+    successResponse(res, result, `Berhasil mengimport ${result.successCount} guru`);
+  }),
   getAll: asyncHandler(async (req: Request, res: Response) => {
     const { data, meta } = await teacherService.getAll(req);
     paginatedResponse(res, data, meta);

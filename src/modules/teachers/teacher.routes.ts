@@ -10,6 +10,8 @@ const router = Router();
 router.use(authMiddleware);
 
 router.get('/', teacherController.getAll);
+router.get('/import-template', requireRole('admin', 'kurikulum'), teacherController.getImportTemplate);
+router.post('/import', requireRole('admin', 'kurikulum'), upload.single('file'), teacherController.importExcel);
 router.get('/:id', teacherController.getById);
 router.post('/', requireRole('admin', 'kurikulum'), validate(createTeacherSchema), teacherController.create);
 router.put('/:id', requireRole('admin', 'kurikulum'), validate(updateTeacherSchema), teacherController.update);

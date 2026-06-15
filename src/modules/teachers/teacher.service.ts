@@ -5,10 +5,11 @@ import { hashPassword } from '../../common/utils/password';
 import { Request } from 'express';
 import { CreateTeacherDto, UpdateTeacherDto, UpdateRolesDto } from './teacher.validation';
 import { env } from '../../config/env';
+import * as xlsx from 'xlsx';
 
 const serializeTeacher = (t: any) => ({
   id: Number(t.id).toString(),
-  photo: t.photo ? `${env.APP_URL}/${t.photo}` : null,
+  photo: t.photo ? (t.photo.startsWith('http') ? t.photo : `${env.APP_URL}${t.photo.startsWith('/') ? '' : '/'}${t.photo}`) : null,
   name: t.name,
   nip: t.nip,
   nuptk: t.nuptk,
@@ -38,6 +39,126 @@ const teacherInclude = {
 };
 
 export const teacherService = {
+  async getImportTemplate(): Promise<Buffer> {
+    const headers = [
+      'Nama Lengkap (Wajib)',
+      'NIP',
+      'NUPTK',
+      'NIK',
+      'Jenis Kelamin (L/P)',
+      'Email',
+      'No WA (Wajib)',
+      'Jabatan',
+      'Username (Opsional)'
+    ];
+    const ws = xlsx.utils.aoa_to_sheet([headers, ['Budi Santoso, S.Pd.', '198001012010011001', '', '', 'L', 'budi@sekolah.id', '081234567890', 'Guru Matematika', 'budiguru']]);
+    
+    // Set column widths
+    const wscols = [
+      { wch: 30 }, { wch: 20 }, { wch: 20 }, { wch: 20 },
+      { wch: 20 }, { wch: 25 }, { wch: 15 }, { wch: 25 }, { wch: 20 }
+    ];
+    ws['!cols'] = wscols;
+
+    const wb = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(wb, ws, 'Template Guru');
+    
+    return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+  },
+
+  async importExcel(buffer: Buffer) {
+    const wb = xlsx.read(buffer, { type: 'buffer' });
+    const wsName = wb.SheetNames[0];
+    const ws = wb.Sheets[wsName];
+    const data = xlsx.utils.sheet_to_json<any>(ws);
+
+    let successCount = 0;
+    let failedCount = 0;
+    const errors: string[] = [];
+
+    const defaultRole = await prisma.role.findUnique({ where: { name: 'guru' } });
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const name = row['Nama Lengkap (Wajib)'];
+      const phone = row['No WA (Wajib)'];
+      
+      if (!name || !phone) {
+        failedCount++;
+        errors.push(`Baris ${i + 2}: Nama Lengkap dan No WA wajib diisi`);
+        continue;
+      }
+
+      const nip = row['NIP'] ? String(row['NIP']).trim() : null;
+      const username = row['Username (Opsional)'] ? String(row['Username (Opsional)']).trim() : null;
+
+      try {
+        await prisma.$transaction(async (tx) => {
+          // Check duplicate NIP
+          if (nip) {
+            const existNip = await tx.teacher.findFirst({ where: { nip } });
+            if (existNip) throw new Error(`NIP ${nip} sudah digunakan`);
+          }
+
+          // Check duplicate Username
+          if (username) {
+            const existUser = await tx.user.findUnique({ where: { username } });
+            if (existUser) throw new Error(`Username ${username} sudah digunakan`);
+          }
+
+          let genderStr = String(row['Jenis Kelamin (L/P)'] || '').toUpperCase();
+          let gender: 'L' | 'P' = 'L';
+          if (genderStr === 'P' || genderStr === 'PEREMPUAN') gender = 'P';
+
+          const newTeacher = await tx.teacher.create({
+            data: {
+              name: String(name).trim(),
+              nip: nip,
+              nuptk: row['NUPTK'] ? String(row['NUPTK']).trim() : null,
+              nik: row['NIK'] ? String(row['NIK']).trim() : null,
+              gender: gender,
+              email: row['Email'] ? String(row['Email']).trim() : null,
+              phone: String(phone).trim(),
+              position: row['Jabatan'] ? String(row['Jabatan']).trim() : null,
+              is_active: true,
+            }
+          });
+
+          if (username) {
+            const hashedPassword = await hashPassword('admin123');
+            const user = await tx.user.create({
+              data: {
+                teacher_id: newTeacher.id,
+                username: username,
+                password: hashedPassword,
+                name: newTeacher.name,
+                email: newTeacher.email,
+                is_active: true,
+              }
+            });
+
+            if (defaultRole) {
+              await tx.userRole.create({
+                data: { user_id: user.id, role_id: defaultRole.id }
+              });
+            }
+          }
+        });
+
+        successCount++;
+      } catch (err: any) {
+        failedCount++;
+        errors.push(`Baris ${i + 2} (${name}): ${err.message}`);
+      }
+    }
+
+    return {
+      successCount,
+      failedCount,
+      errors
+    };
+  },
+
   async getAll(req: Request) {
     const { page, limit, skip } = parsePagination(req);
     const search = (req.query.search as string) || '';

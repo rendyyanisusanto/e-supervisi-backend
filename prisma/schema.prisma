@@ -446,6 +446,9 @@ model WaLog {
 
 model SchoolProfile {
   id               BigInt   @id @default(autoincrement())
+  app_name         String?  @db.VarChar(150) @default("E-Supervisi SMK")
+  app_tagline      String?  @db.VarChar(255) @default("Aplikasi Supervisi Guru Berbasis Data")
+  primary_color    String?  @db.VarChar(30) @default("#0984e3")
   name             String   @db.VarChar(200)
   npsn             String?  @db.VarChar(50)
   address          String?  @db.Text

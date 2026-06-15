@@ -4,10 +4,13 @@ import { env } from '../../config/env';
 
 const serializeProfile = (p: any) => ({
   id: Number(p.id),
+  app_name: p.app_name,
+  app_tagline: p.app_tagline,
+  primary_color: p.primary_color,
   name: p.name, npsn: p.npsn, address: p.address,
   city: p.city, province: p.province, phone: p.phone,
   email: p.email, website: p.website,
-  logo: p.logo ? `${env.APP_URL}/${p.logo}` : null,
+  logo: p.logo ? (p.logo.startsWith('http') ? p.logo : `${env.APP_URL}${p.logo.startsWith('/') ? '' : '/'}${p.logo}`) : null,
   principal_name: p.principal_name, principal_nip: p.principal_nip,
   curriculum_name: p.curriculum_name, curriculum_nip: p.curriculum_nip,
   report_footer: p.report_footer,

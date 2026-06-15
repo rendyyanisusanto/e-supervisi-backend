@@ -4,11 +4,12 @@ import { authMiddleware } from '../../common/middlewares/auth.middleware';
 import { requireRole } from '../../common/middlewares/role.middleware';
 
 const router = Router();
-router.use(authMiddleware);
-
 import { upload } from '../../common/utils/image';
 
+// Make school-profile public so LoginView can fetch App Customization
 router.get('/school-profile', settingsController.getSchoolProfile);
+
+router.use(authMiddleware);
 router.put('/school-profile', requireRole('admin'), settingsController.updateSchoolProfile);
 router.post('/school-profile/logo', requireRole('admin'), upload.single('logo'), settingsController.uploadLogo);
 
