@@ -16,6 +16,12 @@ export const authController = {
     successResponse(res, data);
   }),
 
+  updateProfile: asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.sub;
+    const data = await authService.updateProfile(userId, req.body, req.file);
+    successResponse(res, data, 'Profil berhasil diperbarui');
+  }),
+
   refresh: asyncHandler(async (req: Request, res: Response) => {
     const { refresh_token } = req.body;
     const data = await authService.refresh(refresh_token);

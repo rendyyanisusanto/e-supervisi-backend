@@ -12,6 +12,7 @@ import notificationRoutes from '../modules/notifications/notification.routes';
 import supervisionRoutes from '../modules/supervisions/supervision.routes';
 import reflectionRoutes from '../modules/reflections/reflection.routes';
 import reportRoutes from '../modules/reports/report.routes';
+import dashboardRoutes from '../modules/dashboard/dashboard.routes';
 
 const router = Router();
 
@@ -22,6 +23,9 @@ router.get('/health', (_req, res) => {
 
 // Auth
 router.use('/auth', authRoutes);
+
+// Dashboard
+router.use('/dashboard', dashboardRoutes);
 
 // Master data
 router.use('/periods', periodRoutes);

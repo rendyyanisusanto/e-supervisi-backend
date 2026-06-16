@@ -91,10 +91,10 @@ export const supervisionService = {
     }
 
     // Role-based access control
-    if (userRole === 'Guru') {
+    if (userRole === 'guru') {
       // Guru can only see their own supervisions
       where.teacher_id = BigInt(teacherIdFromToken!);
-    } else if (userRole === 'Penilai') {
+    } else if (userRole === 'penilai') {
       // Penilai can see supervisions where they are the supervisor
       where.supervisor_id = BigInt(teacherIdFromToken!);
     }
@@ -143,10 +143,10 @@ export const supervisionService = {
     if (!supervision) throw new HttpError('Data supervisi tidak ditemukan', 404);
 
     // Role check
-    if (userRole === 'Guru' && supervision.teacher_id.toString() !== teacherIdFromToken) {
+    if (userRole === 'guru' && supervision.teacher_id.toString() !== teacherIdFromToken) {
       throw new HttpError('Akses ditolak', 403);
     }
-    if (userRole === 'Penilai' && supervision.supervisor_id.toString() !== teacherIdFromToken) {
+    if (userRole === 'penilai' && supervision.supervisor_id.toString() !== teacherIdFromToken) {
       throw new HttpError('Akses ditolak', 403);
     }
 
@@ -154,7 +154,7 @@ export const supervisionService = {
   },
 
   async create(dto: CreateSupervisionDto, userId: string, userRole: string) {
-    if (userRole === 'Guru') throw new HttpError('Guru tidak dapat membuat jadwal supervisi', 403);
+    if (userRole === 'guru') throw new HttpError('Guru tidak dapat membuat jadwal supervisi', 403);
 
     const createdId = await prisma.$transaction(async (tx) => {
       // Check references
@@ -239,16 +239,16 @@ export const supervisionService = {
       return supervision.id;
     });
 
-    return this.getById(createdId.toString(), 'Admin');
+    return this.getById(createdId.toString(), 'admin');
   },
 
   async updateSchedule(id: string, dto: UpdateScheduleDto, userRole: string, teacherIdFromToken?: string) {
-    if (userRole === 'Guru') throw new HttpError('Akses ditolak', 403);
+    if (userRole === 'guru') throw new HttpError('Akses ditolak', 403);
 
     const supervision = await prisma.supervision.findUnique({ where: { id: BigInt(id) } });
     if (!supervision) throw new HttpError('Data tidak ditemukan', 404);
     
-    if (userRole === 'Penilai' && supervision.supervisor_id.toString() !== teacherIdFromToken) {
+    if (userRole === 'penilai' && supervision.supervisor_id.toString() !== teacherIdFromToken) {
       throw new HttpError('Akses ditolak', 403);
     }
 
@@ -271,12 +271,12 @@ export const supervisionService = {
   },
 
   async cancel(id: string, userRole: string, teacherIdFromToken?: string) {
-    if (userRole === 'Guru') throw new HttpError('Akses ditolak', 403);
+    if (userRole === 'guru') throw new HttpError('Akses ditolak', 403);
 
     const supervision = await prisma.supervision.findUnique({ where: { id: BigInt(id) } });
     if (!supervision) throw new HttpError('Data tidak ditemukan', 404);
 
-    if (userRole === 'Penilai' && supervision.supervisor_id.toString() !== teacherIdFromToken) {
+    if (userRole === 'penilai' && supervision.supervisor_id.toString() !== teacherIdFromToken) {
       throw new HttpError('Akses ditolak', 403);
     }
 
@@ -308,7 +308,7 @@ export const supervisionService = {
       });
       if (!supervision) throw new HttpError('Data tidak ditemukan', 404);
 
-      if (userRole === 'Guru' || (userRole === 'Penilai' && supervision.supervisor_id.toString() !== teacherIdFromToken)) {
+      if (userRole === 'guru' || (userRole === 'penilai' && supervision.supervisor_id.toString() !== teacherIdFromToken)) {
         throw new HttpError('Akses ditolak', 403);
       }
 
@@ -379,7 +379,7 @@ export const supervisionService = {
       });
       if (!supervision) throw new HttpError('Data tidak ditemukan', 404);
 
-      if (userRole === 'Guru' || (userRole === 'Penilai' && supervision.supervisor_id.toString() !== teacherIdFromToken)) {
+      if (userRole === 'guru' || (userRole === 'penilai' && supervision.supervisor_id.toString() !== teacherIdFromToken)) {
         throw new HttpError('Akses ditolak', 403);
       }
 

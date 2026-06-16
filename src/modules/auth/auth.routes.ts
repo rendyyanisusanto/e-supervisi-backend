@@ -2,12 +2,14 @@ import { Router } from 'express';
 import { authController } from './auth.controller';
 import { validate } from '../../common/middlewares/validate.middleware';
 import { authMiddleware } from '../../common/middlewares/auth.middleware';
-import { loginSchema, refreshTokenSchema } from './auth.validation';
+import { loginSchema, refreshTokenSchema, updateProfileSchema } from './auth.validation';
+import { upload } from '../../common/utils/image';
 
 const router = Router();
 
 router.post('/login', validate(loginSchema), authController.login);
 router.get('/me', authMiddleware, authController.me);
+router.put('/me', authMiddleware, upload.single('photo'), validate(updateProfileSchema), authController.updateProfile);
 router.post('/refresh', validate(refreshTokenSchema), authController.refresh);
 router.post('/logout', authMiddleware, authController.logout);
 

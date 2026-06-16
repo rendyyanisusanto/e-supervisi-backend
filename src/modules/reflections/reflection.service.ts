@@ -46,9 +46,9 @@ export const reflectionService = {
       where.supervision = { ...where.supervision, instrument_id: BigInt(req.query.instrument_id as string) };
     }
 
-    if (userRole === 'Guru') {
+    if (userRole === 'guru') {
       where.teacher_id = BigInt(teacherIdFromToken!);
-    } else if (userRole === 'Penilai') {
+    } else if (userRole === 'penilai') {
       where.supervision = { ...where.supervision, supervisor_id: BigInt(teacherIdFromToken!) };
     }
 
@@ -77,10 +77,10 @@ export const reflectionService = {
 
     if (!reflection) return null; // Frontend can handle null if not filled yet
 
-    if (userRole === 'Guru' && reflection.teacher_id.toString() !== teacherIdFromToken) {
+    if (userRole === 'guru' && reflection.teacher_id.toString() !== teacherIdFromToken) {
       throw new HttpError('Akses ditolak', 403);
     }
-    if (userRole === 'Penilai' && reflection.supervision.supervisor_id.toString() !== teacherIdFromToken) {
+    if (userRole === 'penilai' && reflection.supervision.supervisor_id.toString() !== teacherIdFromToken) {
       throw new HttpError('Akses ditolak', 403);
     }
 
@@ -96,7 +96,7 @@ export const reflectionService = {
         throw new HttpError('Refleksi hanya dapat diisi jika supervisi telah SELESAI', 400);
       }
 
-      if (userRole === 'Guru' && supervision.teacher_id.toString() !== teacherIdFromToken) {
+      if (userRole === 'guru' && supervision.teacher_id.toString() !== teacherIdFromToken) {
         throw new HttpError('Anda hanya dapat mengisi refleksi untuk supervisi Anda sendiri', 403);
       }
 
@@ -157,7 +157,7 @@ export const reflectionService = {
   },
 
   async markAsRead(id: string, userRole: string) {
-    if (userRole === 'Guru') throw new HttpError('Akses ditolak', 403);
+    if (userRole === 'guru') throw new HttpError('Akses ditolak', 403);
 
     const reflection = await prisma.teacherReflection.findUnique({ where: { id: BigInt(id) } });
     if (!reflection) throw new HttpError('Refleksi tidak ditemukan', 404);

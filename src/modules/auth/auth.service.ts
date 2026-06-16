@@ -11,7 +11,9 @@ import {
 } from '../../common/utils/token';
 import { HttpError } from '../../common/middlewares/error.middleware';
 import { MESSAGES } from '../../common/constants/messages';
-import { LoginDto } from './auth.validation';
+import { LoginDto, UpdateProfileDto } from './auth.validation';
+import { hashPassword } from '../../common/utils/password';
+import { compressTeacherPhoto, deleteOldFileIfExists } from '../../common/utils/image';
 
 export const authService = {
   async login(dto: LoginDto) {
@@ -123,5 +125,64 @@ export const authService = {
 
   async logout(userId: number) {
     await revokeAllUserTokens(BigInt(userId));
+  },
+
+  async updateProfile(userId: number, dto: UpdateProfileDto, file?: Express.Multer.File) {
+    const user = await prisma.user.findUnique({
+      where: { id: BigInt(userId) },
+      include: { teacher: true }
+    });
+
+    if (!user) {
+      throw new HttpError(MESSAGES.ERROR.NOT_FOUND, 404);
+    }
+
+    // Check username conflict
+    if (dto.username !== user.username) {
+      const existingUser = await prisma.user.findUnique({ where: { username: dto.username } });
+      if (existingUser) {
+        throw new HttpError('Username sudah digunakan', 400);
+      }
+    }
+
+    // Update Photo
+    let photoUrl = user.teacher.photo;
+    if (file) {
+      photoUrl = await compressTeacherPhoto(file, user.username);
+      // Delete old photo if it exists and it's not the default one
+      if (user.teacher.photo && user.teacher.photo !== photoUrl) {
+        deleteOldFileIfExists(user.teacher.photo);
+      }
+    }
+
+    // Password Hash
+    let updatePassword = user.password;
+    if (dto.password && dto.password.trim() !== '') {
+      updatePassword = await hashPassword(dto.password);
+    }
+
+    // Transaction to update both User and Teacher
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: BigInt(userId) },
+        data: {
+          name: dto.name,
+          username: dto.username,
+          email: dto.email || null,
+          password: updatePassword,
+        }
+      });
+
+      await tx.teacher.update({
+        where: { id: user.teacher_id },
+        data: {
+          name: dto.name,
+          email: dto.email || null,
+          photo: photoUrl,
+        }
+      });
+    });
+
+    return this.me(userId);
   },
 };
