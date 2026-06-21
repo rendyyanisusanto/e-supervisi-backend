@@ -313,6 +313,8 @@ model Supervision {
   recommendation_note String? @db.Text
   conclusion_note    String? @db.Text
 
+  documentation_url  String? @db.VarChar(255)
+
   submitted_at DateTime?
   created_by   BigInt?
   submitted_by BigInt?
@@ -547,4 +549,21 @@ model AuditLog {
   @@index([module])
   @@index([created_at])
   @@map("audit_logs")
+}
+
+// ===============================
+// PENGUMUMAN
+// ===============================
+
+model Announcement {
+  id         BigInt   @id @default(autoincrement())
+  title      String   @db.VarChar(200)
+  summary    String   @db.Text
+  content    String?  @db.Text
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([is_active, created_at])
+  @@map("announcements")
 }

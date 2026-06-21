@@ -108,12 +108,25 @@ export const supervisionService = {
       ];
     }
 
+    // Sorting
+    const sort_by = (req.query.sort_by as string) || 'created_at';
+    const sort_dir = ((req.query.sort_dir as string) || 'desc').toLowerCase() === 'asc' ? 'asc' : 'desc';
+    const orderBy: any = {};
+    
+    if (sort_by === 'final_score') {
+      orderBy.final_score = sort_dir;
+    } else if (sort_by === 'supervision_date') {
+      orderBy.supervision_date = sort_dir;
+    } else {
+      orderBy.created_at = sort_dir;
+    }
+
     const [data, total] = await Promise.all([
       prisma.supervision.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { created_at: 'desc' },
+        orderBy,
         include: supervisionIncludes
       }),
       prisma.supervision.count({ where })
@@ -122,6 +135,51 @@ export const supervisionService = {
     return {
       data: data.map(serializeSupervision),
       meta: buildMeta(total, page, limit)
+    };
+  },
+
+  async getSummary(userRole: string, teacherIdFromToken?: string) {
+    const where: any = {};
+    if (userRole === 'guru') {
+      where.teacher_id = BigInt(teacherIdFromToken!);
+    } else if (userRole === 'penilai') {
+      where.supervisor_id = BigInt(teacherIdFromToken!);
+    }
+
+    const total = await prisma.supervision.count({ where });
+    
+    const completed = await prisma.supervision.findMany({
+      where: { ...where, status: 'SELESAI' },
+      select: { final_score: true }
+    });
+
+    const averageScore = completed.length > 0 
+      ? completed.reduce((acc: number, curr: any) => acc + Number(curr.final_score), 0) / completed.length 
+      : 0;
+
+    const lastSupervision = await prisma.supervision.findFirst({
+      where: { ...where, status: 'SELESAI' },
+      orderBy: { submitted_at: 'desc' },
+      select: { submitted_at: true, final_score: true, final_status: true }
+    });
+
+    // Dummy for unfollowedUp - assumes checking teacherReflection
+    const unfollowedUp = await prisma.teacherReflection.count({
+      where: { 
+        teacher_id: userRole === 'guru' ? BigInt(teacherIdFromToken!) : undefined,
+        status: 'BELUM_DIISI' 
+      }
+    });
+
+    return {
+      total,
+      averageScore: Number(averageScore.toFixed(2)),
+      lastSupervision: lastSupervision ? {
+        date: lastSupervision.submitted_at?.toISOString(),
+        score: Number(lastSupervision.final_score),
+        status: lastSupervision.final_status
+      } : null,
+      unfollowedUp
     };
   },
 
@@ -362,6 +420,7 @@ export const supervisionService = {
           general_note: dto.general_note || null,
           recommendation_note: dto.recommendation_note || null,
           conclusion_note: dto.conclusion_note || null,
+          documentation_url: dto.documentation_url || null,
           supervision_date: supervision.supervision_date || new Date()
         },
         include: { ...supervisionIncludes, items: true }
@@ -436,6 +495,7 @@ export const supervisionService = {
           general_note: dto.general_note || null,
           recommendation_note: dto.recommendation_note || null,
           conclusion_note: dto.conclusion_note || null,
+          documentation_url: dto.documentation_url || null,
           submitted_at: new Date(),
           submitted_by: BigInt(userId),
           supervision_date: dto.supervision_date ? new Date(dto.supervision_date) : (supervision.supervision_date || new Date())

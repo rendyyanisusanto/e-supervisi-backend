@@ -40,7 +40,8 @@ export const saveDraftSchema = z.object({
   improvement_note: z.string().optional().nullable(),
   general_note: z.string().optional().nullable(),
   recommendation_note: z.string().optional().nullable(),
-  conclusion_note: z.string().optional().nullable()
+  conclusion_note: z.string().optional().nullable(),
+  documentation_url: z.string().optional().nullable()
 });
 
 export const submitFinalSchema = z.object({
@@ -54,6 +55,7 @@ export const submitFinalSchema = z.object({
   general_note: z.string().optional().nullable(),
   recommendation_note: z.string().optional().nullable(),
   conclusion_note: z.string().optional().nullable(),
+  documentation_url: z.string().optional().nullable(),
   supervision_date: z.string().optional().nullable() // Boleh diupdate saat finalisasi jika belum ada
 });
 

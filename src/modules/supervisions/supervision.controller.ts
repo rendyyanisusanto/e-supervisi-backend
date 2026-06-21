@@ -11,7 +11,8 @@ export const supervisionController = {
   async getAll(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const user = req.user!;
-      const role = user.roles[0] || '';
+      const requestedRole = req.query.as_role as string;
+      const role = (requestedRole && user.roles.includes(requestedRole)) ? requestedRole : (user.roles.includes('penilai') ? 'penilai' : user.roles[0] || '');
       const result = await supervisionService.getAll(req, role, String(user.sub), String(user.teacher_id));
       res.json({
         success: true,
@@ -23,11 +24,28 @@ export const supervisionController = {
     }
   },
 
+  async getSummary(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const user = req.user!;
+      const requestedRole = req.query.as_role as string;
+      const role = (requestedRole && user.roles.includes(requestedRole)) ? requestedRole : (user.roles.includes('penilai') ? 'penilai' : user.roles[0] || '');
+      const result = await supervisionService.getSummary(role, String(user.teacher_id));
+      res.json({
+        success: true,
+        message: 'Ringkasan supervisi berhasil dimuat',
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async getCompleted(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       req.query.status = 'SELESAI';
       const user = req.user!;
-      const role = user.roles[0] || '';
+      const requestedRole = req.query.as_role as string;
+      const role = (requestedRole && user.roles.includes(requestedRole)) ? requestedRole : (user.roles.includes('penilai') ? 'penilai' : user.roles[0] || '');
       const result = await supervisionService.getAll(req, role, String(user.sub), String(user.teacher_id));
       res.json({
         success: true,
@@ -42,7 +60,8 @@ export const supervisionController = {
   async getById(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const user = req.user!;
-      const role = user.roles[0] || '';
+      const requestedRole = req.query.as_role as string;
+      const role = (requestedRole && user.roles.includes(requestedRole)) ? requestedRole : (user.roles.includes('penilai') ? 'penilai' : user.roles[0] || '');
       const result = await supervisionService.getById(req.params.id as string, role, String(user.teacher_id));
       res.json({
         success: true,
@@ -58,7 +77,8 @@ export const supervisionController = {
     try {
       const dto = createSupervisionSchema.parse(req.body);
       const user = req.user!;
-      const role = user.roles[0] || '';
+      const requestedRole = req.query.as_role as string;
+      const role = (requestedRole && user.roles.includes(requestedRole)) ? requestedRole : (user.roles.includes('penilai') ? 'penilai' : user.roles[0] || '');
       const result = await supervisionService.create(dto, String(user.sub), role);
       res.status(201).json({
         success: true,
@@ -74,7 +94,8 @@ export const supervisionController = {
     try {
       const dto = updateScheduleSchema.parse(req.body);
       const user = req.user!;
-      const role = user.roles[0] || '';
+      const requestedRole = req.query.as_role as string;
+      const role = (requestedRole && user.roles.includes(requestedRole)) ? requestedRole : (user.roles.includes('penilai') ? 'penilai' : user.roles[0] || '');
       const result = await supervisionService.updateSchedule(req.params.id as string, dto, role, String(user.teacher_id));
       res.json({
         success: true,
@@ -89,7 +110,8 @@ export const supervisionController = {
   async cancel(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const user = req.user!;
-      const role = user.roles[0] || '';
+      const requestedRole = req.query.as_role as string;
+      const role = (requestedRole && user.roles.includes(requestedRole)) ? requestedRole : (user.roles.includes('penilai') ? 'penilai' : user.roles[0] || '');
       const result = await supervisionService.cancel(req.params.id as string, role, String(user.teacher_id));
       res.json({
         success: true,
@@ -104,7 +126,8 @@ export const supervisionController = {
   async getItems(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const user = req.user!;
-      const role = user.roles[0] || '';
+      const requestedRole = req.query.as_role as string;
+      const role = (requestedRole && user.roles.includes(requestedRole)) ? requestedRole : (user.roles.includes('penilai') ? 'penilai' : user.roles[0] || '');
       await supervisionService.getById(req.params.id as string, role, String(user.teacher_id));
       const items = await supervisionService.getItems(req.params.id as string);
       res.json({
@@ -117,11 +140,28 @@ export const supervisionController = {
     }
   },
 
+  async uploadDocumentation(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!(req as any).file) {
+        return res.status(400).json({ success: false, message: 'File dokumentasi tidak ditemukan' });
+      }
+      const fileUrl = `/uploads/${(req as any).file.filename}`;
+      res.json({
+        success: true,
+        message: 'Dokumentasi berhasil diunggah',
+        data: { documentation_url: fileUrl }
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async saveDraft(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const dto = saveDraftSchema.parse(req.body);
       const user = req.user!;
-      const role = user.roles[0] || '';
+      const requestedRole = req.query.as_role as string;
+      const role = (requestedRole && user.roles.includes(requestedRole)) ? requestedRole : (user.roles.includes('penilai') ? 'penilai' : user.roles[0] || '');
       const result = await supervisionService.saveDraft(req.params.id as string, dto, role, String(user.teacher_id));
       res.json({
         success: true,
@@ -137,7 +177,8 @@ export const supervisionController = {
     try {
       const dto = submitFinalSchema.parse(req.body);
       const user = req.user!;
-      const role = user.roles[0] || '';
+      const requestedRole = req.query.as_role as string;
+      const role = (requestedRole && user.roles.includes(requestedRole)) ? requestedRole : (user.roles.includes('penilai') ? 'penilai' : user.roles[0] || '');
       const result = await supervisionService.submitFinal(req.params.id as string, dto, String(user.sub), role, String(user.teacher_id));
       res.json({
         success: true,
@@ -152,7 +193,8 @@ export const supervisionController = {
   async getResult(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const user = req.user!;
-      const role = user.roles[0] || '';
+      const requestedRole = req.query.as_role as string;
+      const role = (requestedRole && user.roles.includes(requestedRole)) ? requestedRole : (user.roles.includes('penilai') ? 'penilai' : user.roles[0] || '');
       const result = await supervisionService.getById(req.params.id as string, role, String(user.teacher_id));
       res.json({
         success: true,

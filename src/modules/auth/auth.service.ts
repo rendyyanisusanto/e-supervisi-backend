@@ -20,7 +20,9 @@ export const authService = {
     const user = await prisma.user.findUnique({
       where: { username: dto.username },
       include: {
-        teacher: true,
+        teacher: {
+          include: { mainSubject: true },
+        },
         userRoles: { include: { role: true } },
       },
     });
@@ -62,6 +64,7 @@ export const authService = {
         email: user.email,
         roles,
         position: user.teacher.position,
+        mapel: user.teacher.mainSubject?.name || null,
         photo: user.teacher.photo,
       },
       access_token: accessToken,
@@ -73,7 +76,9 @@ export const authService = {
     const user = await prisma.user.findUnique({
       where: { id: BigInt(userId) },
       include: {
-        teacher: true,
+        teacher: {
+          include: { mainSubject: true },
+        },
         userRoles: { include: { role: true } },
       },
     });
@@ -90,6 +95,7 @@ export const authService = {
       email: user.email,
       roles: user.userRoles.map((ur) => ur.role.name),
       position: user.teacher.position,
+      mapel: user.teacher.mainSubject?.name || null,
       photo: user.teacher.photo,
       last_login_at: user.last_login_at?.toISOString() ?? null,
     };

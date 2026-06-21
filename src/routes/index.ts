@@ -12,7 +12,10 @@ import notificationRoutes from '../modules/notifications/notification.routes';
 import supervisionRoutes from '../modules/supervisions/supervision.routes';
 import reflectionRoutes from '../modules/reflections/reflection.routes';
 import reportRoutes from '../modules/reports/report.routes';
+import announcementRoutes from '../modules/announcements/announcement.routes';
 import dashboardRoutes from '../modules/dashboard/dashboard.routes';
+
+import profileRoutes from '../modules/profile/profile.routes';
 
 const router = Router();
 
@@ -23,6 +26,9 @@ router.get('/health', (_req, res) => {
 
 // Auth
 router.use('/auth', authRoutes);
+
+// Profile
+router.use('/profile', profileRoutes);
 
 // Dashboard
 router.use('/dashboard', dashboardRoutes);
@@ -50,6 +56,9 @@ router.use('/wa', waRoutes);
 
 // Notifications
 router.use('/notifications', notificationRoutes);
+
+// Announcements
+router.use('/announcements', announcementRoutes);
 
 // Audit Logs
 import auditLogRoutes from '../modules/audit-logs/audit-log.routes';
